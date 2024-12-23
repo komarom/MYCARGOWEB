@@ -12,20 +12,8 @@
   ],
   "rewrites": [
     {
-      "source": "/auth/:path*",
-      "destination": "http://27.71.17.99:9090/auth/:path*"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/auth/(.*)",
-      "methods": ["OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, Origin",
-        "Access-Control-Allow-Methods": "GET,OPTIONS,PATCH,DELETE,POST,PUT"
-      },
-      "status": 204
+      "source": "/(.*)",
+      "destination": "http://27.71.17.99:9090/$1"
     }
   ]
 } 
