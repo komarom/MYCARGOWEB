@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '@/api/axios';
 
 export default {
   name: 'LoginPage',
@@ -50,20 +50,14 @@ export default {
       this.loading = true;
 
       try {
-        const response = await axios.post('/auth/getToken', {
+        const response = await api.post('/auth/getToken', {
           USER_ID: this.ID,
           USER_PW: this.PW
-        }, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          withCredentials: true
         });
 
         if (response.data) {
           localStorage.setItem('token', response.data);
-          axios.defaults.headers.common['Authorization'] = `Bearer ${response.data}`;
+          api.defaults.headers.common['Authorization'] = `Bearer ${response.data}`;
           this.$router.push('/fms');
         } else {
           throw new Error('Authentication failed');
@@ -71,9 +65,7 @@ export default {
       } catch (error) {
         console.error('Login error:', error);
         
-        // 에러 메시지 처리 로직
         if (error.response && error.response.data) {
-          // 서버에서 오는 특정 에러 메시지에 따른 처리
           switch(error.response.data.message) {
             case 'DB Query Failed':
               this.error = 'Invalid ID or Password';
