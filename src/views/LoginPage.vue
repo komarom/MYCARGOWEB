@@ -42,6 +42,9 @@ const loginFormRef = ref(null)
 const loginForm = reactive({
   USER_ID: '',
   USER_PW: ''
+  
+  
+  
 })
 
 const rules = {
@@ -91,70 +94,84 @@ const rules = {
     }
     }
   </script>
+  <style scoped>
+  .login-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f5f7fa;
+  }
 
-<style scoped>
-.login-container {
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: #f5f7fa;
-}
+  .login-box {
+    width: 100%;
+    max-width: 360px;
+    padding: 40px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  }
 
-.login-box {
-  width: 100%;
-  max-width: 360px;
-  padding: 40px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
+  .login-box h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #1890ff;
+    font-size: clamp(40px, 8vw, 50px);
+    font-weight: 600;
+    letter-spacing: 1px;
+  }
 
-.login-box h2 {
-  text-align: center;
-  margin-bottom: 30px;
-  color: #1890ff;
-  font-size: clamp(20px, 5vw, 28px);
-  font-weight: 600;
-  letter-spacing: 1px;
-}
+  :deep(.el-form) {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 
-:deep(.el-form) {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+  :deep(.el-form-item) {
+    width: 280px;
+    margin-bottom: 20px;
+  }
 
-:deep(.el-form-item) {
-  width: 280px;
-  margin-bottom: 20px;
-}
+  :deep(.el-input__wrapper) {
+    border-radius: 4px;
+    height: 40px;
+    line-height: 40px;
+    width: 100%;
+    box-sizing: border-box;
+  }
 
-:deep(.el-input__wrapper) {
-  border-radius: 4px;
-  height: 40px;
-  line-height: 40px;
-  width: 100%;
-  box-sizing: border-box;
-}
+  /* 자동완성 배경색 제어 */
+  :deep(.el-input__inner) {
+    background-color: #ffffff !important;
+  }
 
-:deep(.el-button) {
-  width: 280px;
-  height: 40px;
-  background-color: #1890ff;
-  border-color: #1890ff;
-  font-size: 16px;
-  font-weight: 500;
-  border-radius: 4px;
-}
+  :deep(input:-webkit-autofill) {
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+    -webkit-text-fill-color: #000000 !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+  }
 
-:deep(.el-button:hover) {
-  background-color: #40a9ff;
-  border-color: #40a9ff;
-}
-</style>
+  :deep(input:-internal-autofill-selected) {
+    background-color: #ffffff !important;
+    appearance: none !important;
+  }
 
+  :deep(.el-button) {
+    width: 280px;
+    height: 40px;
+    background-color: #1890ff;
+    border-color: #1890ff;
+    font-size: 16px;
+    font-weight: 500;
+    border-radius: 4px;
+  }
+
+  :deep(.el-button:hover) {
+    background-color: #40a9ff;
+    border-color: #40a9ff;
+  }
+  </style>
 Access-Control-Allow-Origin: *
 Access-Control-Allow-Methods: POST, GET, OPTIONS
 Access-Control-Allow-Headers: Content-Type, Authorization
