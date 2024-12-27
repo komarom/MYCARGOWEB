@@ -1,64 +1,37 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Login from '@/views/Login/LoginPage.vue'
+import store from '../store'
 
 const routes = [
   {
     path: '/',
     name: 'Login',
-    component: Login
+    component: () => import('@/views/LoginPage.vue')
   },
   {
-    path: '/fms',
-    name: 'FMS',
-    component: () => import('@/views/FMS/FMSPage.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/tms',
-    name: 'TMS',
-    component: () => import('@/views/TMS/TMSPage.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/wms',
-    name: 'WMS',
-    component: () => import('@/views/WMS/WMSPage.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/bms',
-    name: 'BMS',
-    component: () => import('@/views/BMS/BMSPage.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/report',
-    name: 'Report',
-    component: () => import('@/views/Report/ReportPage.vue'),
-    meta: { requiresAuth: true }
+    path: '/main',
+    name: 'MainLayout',
+    component: () => import('@/views/MainLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'MainPage',
+        component: () => import('@/views/MainPage.vue')
+      }
+    ],
+    beforeEnter: (_to, _from, next) => {
+      const authHeader = store.state.authHeader
+      if (!authHeader) {
+        next('/')
+      } else {
+        next()
+      }
+    }
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL),
+  history: createWebHistory(),
   routes
 })
 
-// 네비게이션 가드 추가
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  
-  // 인증이 필요한 페이지에 접근하려고 할 때
-  if (to.matched.some(record => record.meta.requiresAuth)) {
-    if (!token) {
-      // 토큰이 없으면 로그인 페이지로 리다이렉트
-      next({ name: 'Login' })
-    } else {
-      next() // 토큰이 있으면 진행
-    }
-  } else {
-    next() // 인증이 필요없는 페이지는 그냥 진행
-  }
-})
-
-export default router 
+export default router
