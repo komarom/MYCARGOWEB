@@ -1,9 +1,9 @@
 const config = {
   development: {
-    apiBaseUrl: 'http://27.71.17.99:9090/api'
+    apiBaseUrl: 'http://27.71.17.99:9090/'
   },
   production: {
-    apiBaseUrl: 'http://27.71.17.99:9090/api'
+    apiBaseUrl: 'http://27.71.17.99:9090/'
   }
 };
 

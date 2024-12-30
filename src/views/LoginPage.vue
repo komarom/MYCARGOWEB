@@ -2,176 +2,202 @@
   <div class="login-container">
     <div class="login-box">
       <h2>MYCARGO</h2>
-      <el-form :model="loginForm" ref="loginFormRef" :rules="rules">
-        <el-form-item prop="USER_ID">
-          <el-input 
-            v-model="loginForm.USER_ID" 
-            placeholder="ID"
+      <form @submit.prevent="handleLogin">
+        <input
+          type="text" 
+          v-model="USER_ID"
+          placeholder="ID"
+          class="login-input"
+        />
+        <input
+          type="password"
+          v-model="USER_PW" 
+          placeholder="Password"
+          class="login-input"
+        />
+        <label class="save-login">
+          <input
+            type="checkbox"
+            v-model="saveLogin"
           />
-        </el-form-item>
-        <el-form-item prop="USER_PW">
-          <el-input 
-            v-model="loginForm.USER_PW" 
-            type="password" 
-            placeholder="Password"
-            @keyup.enter="handleLogin"
-          />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="handleLogin" :loading="loading">
-            Login
-          </el-button>
-        </el-form-item>
-      </el-form>
+          <span>Save ID/Password</span>
+        </label>
+        <button type="submit" :disabled="loading">Login</button>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
-import { ElMessage, ElButton, ElForm, ElFormItem, ElInput } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import axios from '@/config/axios'
 
 const router = useRouter()
 const store = useStore()
 const loading = ref(false)
-const loginFormRef = ref(null)
 
-const loginForm = reactive({
-  USER_ID: '',
-  USER_PW: ''
-  
-  
-  
-})
+const USER_ID = ref('')
+const USER_PW = ref('')
+const saveLogin = ref(false)
 
-const rules = {
-  USER_ID: [{ required: true, message: 'Please enter your ID', trigger: 'blur' }],
-  USER_PW: [{ required: true, message: 'Please enter your password', trigger: 'blur' }]
-}
-  const handleLogin = async () => {
-    if (!loginFormRef.value) return
+const handleLogin = async () => {
+  try {
+    loading.value = true
 
-    try {
-      await loginFormRef.value.validate()
-      loading.value = true
+    const response = await axios.post('http://27.71.17.99:9090/auth/getToken', {
+      USER_ID: USER_ID.value,
+      USER_PW: USER_PW.value
+    })
 
-      const response = await axios.post('/auth/getToken', loginForm)
-    
-      if (response?.data) {
-        const token = response.data
-        const authHeader = 'Bearer ' + token
-        
-        store.commit('setAuthHeader', authHeader)
-        
-        const loginInfo = await axios.post('/webCommon/getLoginInfo', {}, {
-          headers: {
-            'Authorization': authHeader
-          }
-        })
-        
-        if (loginInfo?.data) {
-          const userData = loginInfo.data[0]
-          localStorage.setItem('sessionData', JSON.stringify(userData))
-          store.commit('setUserInfo', userData)
-        
-          ElMessage.success('Login Success')
-          router.push('/main')
-        }
+    if (saveLogin.value) {
+      localStorage.setItem('savedUserId', USER_ID.value);
+      localStorage.setItem('savedPassword', USER_PW.value);
+      localStorage.setItem('saveCredentials', 'true');
+    } else {
+      localStorage.removeItem('savedUserId');
+      localStorage.removeItem('savedPassword');
+      localStorage.setItem('saveCredentials', 'false');
+    }
+
+    if (response?.data) {
+      if (response?.data === 'Authorization header missing or invalid format' ||
+          response?.data === 'Token is invalid due to another login' ||
+          response?.data === 'Authorization token missing or invalid') {
+        throw new Error(response.data);
       }
-    } catch (error) {
-      const errorMessage = {
-        401: 'Invalid ID or Password',
-        500: 'Server Error',
-        undefined: 'Network Connection Error'
-      }[error.response?.status] || 'Login Failed'
-    
-      ElMessage.error(errorMessage)
-    } finally {
-      loading.value = false
+
+      const token = response.data
+      const authHeader = 'Bearer ' + token
+      
+      store.commit('setAuthHeader', authHeader)
+      
+      const loginInfo = await axios.post('/webCommon/getLoginInfo', {}, {
+        headers: {
+          'Authorization': authHeader
+        }
+      })
+      
+      if (loginInfo?.data) {
+        const userData = loginInfo.data[0]
+        localStorage.setItem('sessionData', JSON.stringify(userData))
+        store.commit('setUserInfo', userData)
+      
+        ElMessage.success('Login Success')
+        router.push('/main')
+      }
     }
-    }
-  </script>
-  <style scoped>
-  .login-container {
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f5f7fa;
+  } catch (error) {
+    const errorMessage = {
+      401: 'Invalid ID or Password',
+      500: 'Invalid ID or Password',
+      undefined: 'Network Connection Error'
+    }[error.response?.status] || 'Login Failed'
+  
+    ElMessage.error(errorMessage)
+  } finally {
+    loading.value = false
   }
+}
 
-  .login-box {
-    width: 100%;
-    max-width: 360px;
-    padding: 40px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  }
+onMounted(() => {
+  USER_ID.value = localStorage.getItem('savedUserId') || '';
+  USER_PW.value = localStorage.getItem('savedPassword') || '';
+  saveLogin.value = localStorage.getItem('saveCredentials') === 'true';
+})
+</script>
 
-  .login-box h2 {
-    text-align: center;
-    margin-bottom: 30px;
-    color: #1890ff;
-    font-size: clamp(40px, 8vw, 50px);
-    font-weight: 600;
-    letter-spacing: 1px;
-  }
+<style scoped>
+.login-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f7fa;
+}
 
-  :deep(.el-form) {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+.login-box {
+  width: 100%;
+  max-width: 360px;
+  padding: 40px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
 
-  :deep(.el-form-item) {
-    width: 280px;
-    margin-bottom: 20px;
-  }
+.login-box h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #1890ff;
+  font-size: clamp(40px, 8vw, 50px);
+  font-weight: 600;
+  letter-spacing: 1px;
+}
 
-  :deep(.el-input__wrapper) {
-    border-radius: 4px;
-    height: 40px;
-    line-height: 40px;
-    width: 100%;
-    box-sizing: border-box;
-  }
+form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-  /* 자동완성 배경색 제어 */
-  :deep(.el-input__inner) {
-    background-color: #ffffff !important;
-  }
+.login-input {
+  width: 280px;
+  padding: 8px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  height: 40px;
+  line-height: 40px;
+  box-sizing: border-box;
+  border: 1px solid #dcdfe6;
+}
 
-  :deep(input:-webkit-autofill) {
-    -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
-    -webkit-text-fill-color: #000000 !important;
-    transition: background-color 5000s ease-in-out 0s !important;
-  }
+.save-login {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 20px;
+  width: 280px;
+}
 
-  :deep(input:-internal-autofill-selected) {
-    background-color: #ffffff !important;
-    appearance: none !important;
-  }
+.save-login input[type="checkbox"] {
+  margin: 0;
+}
 
-  :deep(.el-button) {
-    width: 280px;
-    height: 40px;
-    background-color: #1890ff;
-    border-color: #1890ff;
-    font-size: 16px;
-    font-weight: 500;
-    border-radius: 4px;
-  }
+button {
+  width: 280px;
+  height: 40px;
+  background-color: #1890ff;
+  border-color: #1890ff;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+}
 
-  :deep(.el-button:hover) {
-    background-color: #40a9ff;
-    border-color: #40a9ff;
-  }
-  </style>
-Access-Control-Allow-Origin: *
-Access-Control-Allow-Methods: POST, GET, OPTIONS
-Access-Control-Allow-Headers: Content-Type, Authorization
+button:hover {
+  background-color: #40a9ff;
+  border-color: #40a9ff;
+}
+
+button:disabled {
+  background-color: #a0cfff;
+  border-color: #a0cfff;
+  cursor: not-allowed;
+}
+
+/* 자동완성 배경색 제어 */
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #000000 !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+}
+
+input:-internal-autofill-selected {
+  background-color: #ffffff !important;
+  appearance: none !important;
+}
+</style>
