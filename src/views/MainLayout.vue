@@ -7,30 +7,52 @@
         <el-button type="text" @click="handleLogout">Logout</el-button>
       </div>
     </div>
-    <!-- 메뉴 영역 -->
     <div class="main-content">
       <div class="side-menu">
         <el-menu class="menu-vertical">
+          <!-- 1레벨 메뉴 -->
           <template v-for="menu in menuList" :key="menu.MENU_ID">
             <el-sub-menu 
-              v-if="menu.MENU_TYPE === 'F'" 
+              v-if="menu.children && menu.children.length > 0" 
               :index="String(menu.MENU_ID)"
             >
               <template #title>
                 <span>{{ menu.MENU_NM }}</span>
               </template>
-              <el-menu-item 
-                v-for="subMenu in menu.children" 
-                :key="subMenu.MENU_ID"
-                :index="String(subMenu.MENU_ID)"
-                @click="handleMenuClick(subMenu)"
-              >
-                {{ subMenu.MENU_NM }}
-              </el-menu-item>
+              
+              <!-- 2레벨 메뉴 -->
+              <template v-for="subMenu in menu.children" :key="subMenu.MENU_ID">
+                <el-sub-menu 
+                  v-if="subMenu.children && subMenu.children.length > 0"
+                  :index="String(subMenu.MENU_ID)"
+                >
+                  <template #title>
+                    <span>{{ subMenu.MENU_NM }}</span>
+                  </template>
+                  
+                  <!-- 3레벨 메뉴 -->
+                  <el-menu-item 
+                    v-for="lastMenu in subMenu.children"
+                    :key="lastMenu.MENU_ID"
+                    :index="String(lastMenu.MENU_ID)"
+                    @click="handleMenuClick(lastMenu)"
+                  >
+                    {{ lastMenu.MENU_NM }}
+                  </el-menu-item>
+                </el-sub-menu>
+                
+                <el-menu-item 
+                  v-else
+                  :index="String(subMenu.MENU_ID)"
+                  @click="handleMenuClick(subMenu)"
+                >
+                  {{ subMenu.MENU_NM }}
+                </el-menu-item>
+              </template>
             </el-sub-menu>
 
             <el-menu-item 
-              v-else 
+              v-else
               :index="String(menu.MENU_ID)"
               @click="handleMenuClick(menu)"
             >
@@ -46,34 +68,63 @@
   </div>
 </template>
 
-<script setup>
-import { onMounted, computed } from 'vue'
-import { ElButton } from 'element-plus'
+<script>
+import { ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
+import axios from '@/config/axios'
 
-const router = useRouter()
-const store = useStore()
-const userInfo = computed(() => store.state.userInfo)
+export default {
+  setup() {
+    const router = useRouter()
+    const store = useStore()
+    const menuList = ref([])
+    const userInfo = computed(() => store.state.userInfo)
 
-onMounted(() => {
-  const authHeader = store.state.authHeader
-  if (!authHeader) {
-    router.push('/')
-  }
-})
+    onMounted(async () => {
+      // 사용자 정보 로드
+      const userData = localStorage.getItem('userInfo')
+      if (userData) {
+        store.commit('setUserInfo', JSON.parse(userData))
+      }
 
-const handleLogout = () => {
-  store.commit('setAuthHeader', null)
-  store.commit('setUserInfo', null)
-  localStorage.removeItem('sessionData')
-  localStorage.removeItem('token')
-  router.push('/')
-}
+      // 메뉴 로드
+      try {
+        const authHeader = store.state.authHeader
+        console.log("authHeader : "  + authHeader);
+       
+        const response = await axios.post('/webCommon/getMenu', {}, {
+        headers: {
+          'Authorization': authHeader
+        }
+      })
 
-const handleMenuClick = (menu) => {
-  if(menu.MENU_TYPE === 'M' && menu.SRC_PATH) {
-    router.push(menu.SRC_PATH)
+        menuList.value = response.data
+        console.log("response : " + response);
+        console.log("menuList : " + menuList.value);
+      } catch (error) {
+        console.error('Failed to load menu:', error)
+      }
+    })
+
+    const handleLogout = () => {
+      store.commit('setUserInfo', null)
+      localStorage.removeItem('userInfo')
+      router.push('/')
+    }
+
+    const handleMenuClick = (menu) => {
+      if(menu.SRC_PATH) {
+        router.push(menu.SRC_PATH)
+      }
+    }
+
+    return {
+      menuList,
+      userInfo,
+      handleLogout,
+      handleMenuClick
+    }
   }
 }
 </script>
