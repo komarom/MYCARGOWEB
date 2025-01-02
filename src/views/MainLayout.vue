@@ -10,53 +10,33 @@
     <div class="main-content">
       <div class="side-menu">
         <el-menu class="menu-vertical">
-          <!-- 1레벨 메뉴 -->
-          <template v-for="menu in menuList" :key="menu.MENU_ID">
+          <template v-for="menu in formattedMenuList" :key="menu.MENU_ID">
+            <!-- Folder type menu (MENU_TYPE: F) -->
             <el-sub-menu 
-              v-if="menu.children && menu.children.length > 0" 
-              :index="String(menu.MENU_ID)"
+              v-if="menu.MENU_TYPE === 'F'"
+              :index="menu.MENU_ID"
             >
               <template #title>
-                <span>{{ menu.MENU_NM }}</span>
+                <span>{{ menu.MENU_NAME }}</span>
               </template>
-              
-              <!-- 2레벨 메뉴 -->
-              <template v-for="subMenu in menu.children" :key="subMenu.MENU_ID">
-                <el-sub-menu 
-                  v-if="subMenu.children && subMenu.children.length > 0"
-                  :index="String(subMenu.MENU_ID)"
-                >
-                  <template #title>
-                    <span>{{ subMenu.MENU_NM }}</span>
-                  </template>
-                  
-                  <!-- 3레벨 메뉴 -->
-                  <el-menu-item 
-                    v-for="lastMenu in subMenu.children"
-                    :key="lastMenu.MENU_ID"
-                    :index="String(lastMenu.MENU_ID)"
-                    @click="handleMenuClick(lastMenu)"
-                  >
-                    {{ lastMenu.MENU_NM }}
-                  </el-menu-item>
-                </el-sub-menu>
-                
-                <el-menu-item 
-                  v-else
-                  :index="String(subMenu.MENU_ID)"
-                  @click="handleMenuClick(subMenu)"
-                >
-                  {{ subMenu.MENU_NM }}
-                </el-menu-item>
-              </template>
+              <!-- Child menu items -->
+              <el-menu-item
+                v-for="childMenu in menu.children"
+                :key="childMenu.MENU_ID"
+                :index="childMenu.MENU_ID"
+                @click="handleMenuClick(childMenu)"
+              >
+                {{ childMenu.MENU_NAME }}
+              </el-menu-item>
             </el-sub-menu>
 
-            <el-menu-item 
-              v-else
-              :index="String(menu.MENU_ID)"
+            <!-- Page type menu (MENU_TYPE: M) with no parent -->
+            <el-menu-item
+              v-else-if="menu.MENU_TYPE === 'M' && !menu.PARENTS_MENU_ID"
+              :index="menu.MENU_ID"
               @click="handleMenuClick(menu)"
             >
-              {{ menu.MENU_NM }}
+              {{ menu.MENU_NAME }}
             </el-menu-item>
           </template>
         </el-menu>
@@ -80,6 +60,20 @@ export default {
     const store = useStore()
     const menuList = ref([])
     const userInfo = computed(() => store.state.userInfo)
+
+    // New computed property to format the menu structure
+    const formattedMenuList = computed(() => {
+      const menus = menuList.value
+      const formattedMenus = menus.filter(menu => !menu.PARENTS_MENU_ID)
+      
+      formattedMenus.forEach(menu => {
+        if (menu.MENU_TYPE === 'F') {
+          menu.children = menus.filter(item => item.PARENTS_MENU_ID === menu.MENU_ID)
+        }
+      })
+      
+      return formattedMenus
+    })
 
     onMounted(async () => {
       // 사용자 정보 로드
@@ -114,13 +108,13 @@ export default {
     }
 
     const handleMenuClick = (menu) => {
-      if(menu.SRC_PATH) {
+      if (menu.MENU_TYPE === 'M' && menu.SRC_PATH) {
         router.push(menu.SRC_PATH)
       }
     }
 
     return {
-      menuList,
+      formattedMenuList,
       userInfo,
       handleLogout,
       handleMenuClick
@@ -183,5 +177,31 @@ export default {
   padding: 20px;
   overflow-y: auto;
   background-color: #f5f7fa;
+}
+
+/* 일반 메뉴 아이템 (페이지 타입) */
+:deep(.el-menu-item) {
+  background-color: #1890ff !important;
+  color: white !important;
+}
+
+:deep(.el-menu-item:hover) {
+  background-color: #40a9ff !important;
+}
+
+/* 폴더 타입 메뉴 */
+:deep(.el-sub-menu__title) {
+  background-color: #faad14 !important;
+  color: white !important;
+}
+
+:deep(.el-sub-menu__title:hover) {
+  background-color: #ffc53d !important;
+}
+
+/* 선택된 메뉴 아이템 */
+:deep(.el-menu-item.is-active) {
+  background-color: #096dd9 !important;
+  color: white !important;
 }
 </style>
