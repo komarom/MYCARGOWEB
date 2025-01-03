@@ -10,8 +10,8 @@
     <div class="main-content">
       <div class="side-menu">
         <el-menu class="menu-vertical">
+          <!-- Level 1 -->
           <template v-for="menu in formattedMenuList" :key="menu.MENU_ID">
-            <!-- Folder type menu (MENU_TYPE: F) -->
             <el-sub-menu 
               v-if="menu.MENU_TYPE === 'F'"
               :index="menu.MENU_ID"
@@ -19,20 +19,60 @@
               <template #title>
                 <span>{{ menu.MENU_NAME }}</span>
               </template>
-              <!-- Child menu items -->
-              <el-menu-item
-                v-for="childMenu in menu.children"
-                :key="childMenu.MENU_ID"
-                :index="childMenu.MENU_ID"
-                @click="handleMenuClick(childMenu)"
-              >
-                {{ childMenu.MENU_NAME }}
-              </el-menu-item>
+              
+              <!-- Level 2 -->
+              <template v-for="subMenu in menu.children" :key="subMenu.MENU_ID">
+                <el-sub-menu 
+                  v-if="subMenu.MENU_TYPE === 'F'"
+                  :index="subMenu.MENU_ID"
+                >
+                  <template #title>
+                    <span>{{ subMenu.MENU_NAME }}</span>
+                  </template>
+                  
+                  <!-- Level 3 -->
+                  <template v-for="thirdMenu in subMenu.children" :key="thirdMenu.MENU_ID">
+                    <el-sub-menu
+                      v-if="thirdMenu.MENU_TYPE === 'F'"
+                      :index="thirdMenu.MENU_ID"
+                    >
+                      <template #title>
+                        <span>{{ thirdMenu.MENU_NAME }}</span>
+                      </template>
+
+                      <!-- Level 4 -->
+                      <el-menu-item
+                        v-for="fourthMenu in thirdMenu.children"
+                        :key="fourthMenu.MENU_ID"
+                        :index="fourthMenu.MENU_ID"
+                        @click="handleMenuClick(fourthMenu)"
+                      >
+                        {{ fourthMenu.MENU_NAME }}
+                      </el-menu-item>
+                    </el-sub-menu>
+
+                    <el-menu-item
+                      v-else
+                      :index="thirdMenu.MENU_ID"
+                      @click="handleMenuClick(thirdMenu)"
+                    >
+                      {{ thirdMenu.MENU_NAME }}
+                    </el-menu-item>
+                  </template>
+                </el-sub-menu>
+                
+                <el-menu-item
+                  v-else
+                  :index="subMenu.MENU_ID"
+                  @click="handleMenuClick(subMenu)"
+                >
+                  {{ subMenu.MENU_NAME }}
+                </el-menu-item>
+              </template>
             </el-sub-menu>
 
-            <!-- Page type menu (MENU_TYPE: M) with no parent -->
             <el-menu-item
-              v-else-if="menu.MENU_TYPE === 'M' && !menu.PARENTS_MENU_ID"
+              v-else
               :index="menu.MENU_ID"
               @click="handleMenuClick(menu)"
             >
@@ -61,20 +101,6 @@ export default {
     const menuList = ref([])
     const userInfo = computed(() => store.state.userInfo)
 
-    // New computed property to format the menu structure
-    const formattedMenuList = computed(() => {
-      const menus = menuList.value
-      const formattedMenus = menus.filter(menu => !menu.PARENTS_MENU_ID)
-      
-      formattedMenus.forEach(menu => {
-        if (menu.MENU_TYPE === 'F') {
-          menu.children = menus.filter(item => item.PARENTS_MENU_ID === menu.MENU_ID)
-        }
-      })
-      
-      return formattedMenus
-    })
-
     onMounted(async () => {
       // 사용자 정보 로드
       const userData = localStorage.getItem('userInfo')
@@ -88,10 +114,10 @@ export default {
         console.log("authHeader : "  + authHeader);
        
         const response = await axios.post('/webCommon/getMenu', {}, {
-        headers: {
-          'Authorization': authHeader
-        }
-      })
+          headers: {
+            'Authorization': authHeader
+          }
+        })
 
         menuList.value = response.data
         console.log("response : " + response);
@@ -101,6 +127,38 @@ export default {
       }
     })
 
+    const formattedMenuList = computed(() => {
+      const menus = menuList.value
+      const formattedMenus = menus.filter(menu => !menu.PARENTS_MENU_ID)
+      
+      formattedMenus.forEach(menu => {
+        if (menu.MENU_TYPE === 'F') {
+          // Level 2
+          const level2Items = menus.filter(item => item.PARENTS_MENU_ID === menu.MENU_ID)
+          
+          level2Items.forEach(l2Item => {
+            if (l2Item.MENU_TYPE === 'F') {
+              // Level 3
+              const level3Items = menus.filter(item => item.PARENTS_MENU_ID === l2Item.MENU_ID)
+              
+              level3Items.forEach(l3Item => {
+                if (l3Item.MENU_TYPE === 'F') {
+                  // Level 4
+                  l3Item.children = menus.filter(item => item.PARENTS_MENU_ID === l3Item.MENU_ID)
+                }
+              })
+              
+              l2Item.children = level3Items
+            }
+          })
+          
+          menu.children = level2Items
+        }
+      })
+      
+      return formattedMenus
+    })
+
     const handleLogout = () => {
       store.commit('setUserInfo', null)
       localStorage.removeItem('userInfo')
@@ -108,7 +166,7 @@ export default {
     }
 
     const handleMenuClick = (menu) => {
-      if (menu.MENU_TYPE === 'M' && menu.SRC_PATH) {
+      if(menu.SRC_PATH) {
         router.push(menu.SRC_PATH)
       }
     }
@@ -122,6 +180,7 @@ export default {
   }
 }
 </script>
+
 <style scoped>
 .layout-container {
   display: flex;
@@ -150,7 +209,7 @@ export default {
   align-items: center;
   gap: 10px;
 }
-/* 로그아웃 버튼 스타일 추가 */
+
 :deep(.el-button) {
   font-weight: 600;
 }
@@ -179,7 +238,6 @@ export default {
   background-color: #f5f7fa;
 }
 
-/* 일반 메뉴 아이템 (페이지 타입) */
 :deep(.el-menu-item) {
   background-color: #1890ff !important;
   color: white !important;
@@ -189,7 +247,6 @@ export default {
   background-color: #40a9ff !important;
 }
 
-/* 폴더 타입 메뉴 */
 :deep(.el-sub-menu__title) {
   background-color: #faad14 !important;
   color: white !important;
@@ -199,9 +256,24 @@ export default {
   background-color: #ffc53d !important;
 }
 
-/* 선택된 메뉴 아이템 */
 :deep(.el-menu-item.is-active) {
   background-color: #096dd9 !important;
   color: white !important;
+}
+
+:deep(.el-menu-item), :deep(.el-sub-menu__title) {
+  padding-left: 20px !important;
+}
+
+:deep(.el-sub-menu .el-menu-item) {
+  padding-left: 40px !important;
+}
+
+:deep(.el-sub-menu .el-sub-menu .el-menu-item) {
+  padding-left: 60px !important;
+}
+
+:deep(.el-sub-menu .el-sub-menu .el-sub-menu .el-menu-item) {
+  padding-left: 80px !important;
 }
 </style>
