@@ -47,7 +47,7 @@ const handleLogin = async () => {
   try {
     loading.value = true
 
-    const response = await axios.post('http://27.71.17.99:9090/auth/getToken', {
+    const response = await axios.post('/auth/getToken', {
       USER_ID: USER_ID.value,
       USER_PW: USER_PW.value
     })
@@ -101,7 +101,6 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
-
 onMounted(() => {
   USER_ID.value = localStorage.getItem('savedUserId') || '';
   USER_PW.value = localStorage.getItem('savedPassword') || '';
