@@ -4,6 +4,10 @@ import store from '../store'
 const routes = [
   {
     path: '/',
+    redirect: '/index.html'
+  },
+  {
+    path: '/index.html',
     name: 'Login',
     component: () => import('@/views/LoginPage.vue')
   },
