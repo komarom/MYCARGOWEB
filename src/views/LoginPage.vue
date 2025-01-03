@@ -101,6 +101,7 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
+
 onMounted(() => {
   USER_ID.value = localStorage.getItem('savedUserId') || '';
   USER_PW.value = localStorage.getItem('savedPassword') || '';
