@@ -14,7 +14,7 @@
           <template v-for="menu in formattedMenuList" :key="menu.MENU_ID">
             <el-sub-menu 
               v-if="menu.MENU_TYPE === 'F'"
-              :index="menu.MENU_ID"
+              :index="String(menu.MENU_ID)"
             >
               <template #title>
                 <span>{{ menu.MENU_NAME }}</span>
@@ -24,7 +24,7 @@
               <template v-for="subMenu in menu.children" :key="subMenu.MENU_ID">
                 <el-sub-menu 
                   v-if="subMenu.MENU_TYPE === 'F'"
-                  :index="subMenu.MENU_ID"
+                  :index="String(subMenu.MENU_ID)"
                 >
                   <template #title>
                     <span>{{ subMenu.MENU_NAME }}</span>
@@ -34,26 +34,29 @@
                   <template v-for="thirdMenu in subMenu.children" :key="thirdMenu.MENU_ID">
                     <el-sub-menu
                       v-if="thirdMenu.MENU_TYPE === 'F'"
-                      :index="thirdMenu.MENU_ID"
+                      :index="String(thirdMenu.MENU_ID)"
                     >
                       <template #title>
                         <span>{{ thirdMenu.MENU_NAME }}</span>
                       </template>
 
                       <!-- Level 4 -->
-                      <el-menu-item
-                        v-for="fourthMenu in thirdMenu.children"
-                        :key="fourthMenu.MENU_ID"
-                        :index="fourthMenu.MENU_ID"
-                        @click="handleMenuClick(fourthMenu)"
-                      >
-                        {{ fourthMenu.MENU_NAME }}
-                      </el-menu-item>
+                      <template v-for="fourthMenu in thirdMenu.children" :key="fourthMenu.MENU_ID">
+                        <el-menu-item
+                          v-if="fourthMenu.MENU_TYPE === 'M'"
+                          :index="String(fourthMenu.MENU_ID)"
+                          class="menu-type-m"
+                          @click="handleMenuClick(fourthMenu)"
+                        >
+                          {{ fourthMenu.MENU_NAME }}
+                        </el-menu-item>
+                      </template>
                     </el-sub-menu>
 
                     <el-menu-item
-                      v-else
-                      :index="thirdMenu.MENU_ID"
+                      v-else-if="thirdMenu.MENU_TYPE === 'M'"
+                      :index="String(thirdMenu.MENU_ID)"
+                      class="menu-type-m"
                       @click="handleMenuClick(thirdMenu)"
                     >
                       {{ thirdMenu.MENU_NAME }}
@@ -62,8 +65,9 @@
                 </el-sub-menu>
                 
                 <el-menu-item
-                  v-else
-                  :index="subMenu.MENU_ID"
+                  v-else-if="subMenu.MENU_TYPE === 'M'"
+                  :index="String(subMenu.MENU_ID)"
+                  class="menu-type-m"
                   @click="handleMenuClick(subMenu)"
                 >
                   {{ subMenu.MENU_NAME }}
@@ -72,8 +76,9 @@
             </el-sub-menu>
 
             <el-menu-item
-              v-else
-              :index="menu.MENU_ID"
+              v-else-if="menu.MENU_TYPE === 'M'"
+              :index="String(menu.MENU_ID)"
+              class="menu-type-m"
               @click="handleMenuClick(menu)"
             >
               {{ menu.MENU_NAME }}
@@ -102,48 +107,38 @@ export default {
     const userInfo = computed(() => store.state.userInfo)
 
     onMounted(async () => {
-      // 사용자 정보 로드
       const userData = localStorage.getItem('userInfo')
       if (userData) {
         store.commit('setUserInfo', JSON.parse(userData))
       }
 
-      // 메뉴 로드
       try {
         const authHeader = store.state.authHeader
-        console.log("authHeader : "  + authHeader);
-       
         const response = await axios.post('/webCommon/getMenu', {}, {
           headers: {
             'Authorization': authHeader
           }
         })
-
         menuList.value = response.data
-        console.log("response : " + response);
-        console.log("menuList : " + menuList.value);
       } catch (error) {
         console.error('Failed to load menu:', error)
       }
     })
 
     const formattedMenuList = computed(() => {
-      const menus = menuList.value
+      const menus = menuList.value || []
       const formattedMenus = menus.filter(menu => !menu.PARENTS_MENU_ID)
       
       formattedMenus.forEach(menu => {
         if (menu.MENU_TYPE === 'F') {
-          // Level 2
           const level2Items = menus.filter(item => item.PARENTS_MENU_ID === menu.MENU_ID)
           
           level2Items.forEach(l2Item => {
             if (l2Item.MENU_TYPE === 'F') {
-              // Level 3
               const level3Items = menus.filter(item => item.PARENTS_MENU_ID === l2Item.MENU_ID)
               
               level3Items.forEach(l3Item => {
                 if (l3Item.MENU_TYPE === 'F') {
-                  // Level 4
                   l3Item.children = menus.filter(item => item.PARENTS_MENU_ID === l3Item.MENU_ID)
                 }
               })
@@ -238,22 +233,44 @@ export default {
   background-color: #f5f7fa;
 }
 
-:deep(.el-menu-item) {
+/* M 타입 메뉴 스타일 */
+:deep(.menu-type-m) {
   background-color: #1890ff !important;
   color: white !important;
 }
 
-:deep(.el-menu-item:hover) {
+:deep(.menu-type-m:hover) {
   background-color: #40a9ff !important;
 }
 
-:deep(.el-sub-menu__title) {
+/* Menu Type F - 레벨별 색상 */
+/* Level 1 */
+:deep(.el-sub-menu > .el-sub-menu__title) {
   background-color: #faad14 !important;
   color: white !important;
 }
 
+/* Level 2 */
+:deep(.el-sub-menu .el-sub-menu > .el-sub-menu__title) {
+  background-color: #d48806 !important;
+  color: white !important;
+}
+
+/* Level 3 */
+:deep(.el-sub-menu .el-sub-menu .el-sub-menu > .el-sub-menu__title) {
+  background-color: #ad6800 !important;
+  color: white !important;
+}
+
+/* Level 4 */
+:deep(.el-sub-menu .el-sub-menu .el-sub-menu .el-menu-item) {
+  background-color: #874d00 !important;
+  color: white !important;
+}
+
+/* Hover effects */
 :deep(.el-sub-menu__title:hover) {
-  background-color: #ffc53d !important;
+  opacity: 0.9 !important;
 }
 
 :deep(.el-menu-item.is-active) {
@@ -261,19 +278,41 @@ export default {
   color: white !important;
 }
 
+/* Level 1 */
 :deep(.el-menu-item), :deep(.el-sub-menu__title) {
   padding-left: 20px !important;
 }
 
-:deep(.el-sub-menu .el-menu-item) {
+/* Level 2 */
+:deep(.el-sub-menu .el-menu-item), :deep(.el-sub-menu .el-sub-menu__title) {
   padding-left: 40px !important;
 }
 
-:deep(.el-sub-menu .el-sub-menu .el-menu-item) {
+/* Level 3 */
+:deep(.el-sub-menu .el-sub-menu .el-menu-item), :deep(.el-sub-menu .el-sub-menu .el-sub-menu__title) {
   padding-left: 60px !important;
 }
 
+/* Level 4 */
 :deep(.el-sub-menu .el-sub-menu .el-sub-menu .el-menu-item) {
   padding-left: 80px !important;
 }
+
+/* Level 4 F타입 메뉴 */
+:deep(.el-sub-menu .el-sub-menu .el-sub-menu .el-menu-item:not(.menu-type-m)) {
+  background-color: #874d00 !important;
+  color: white !important;
+}
+
+/* Level 4 M타입 메뉴 - 더 높은 우선순위 */
+:deep(.el-sub-menu .el-sub-menu .el-sub-menu .menu-type-m) {
+  background-color: #1890ff !important;
+  color: white !important;
+}
+
+:deep(.el-sub-menu .el-sub-menu .el-sub-menu .menu-type-m:hover) {
+  background-color: #40a9ff !important;
+}
+
 </style>
+
