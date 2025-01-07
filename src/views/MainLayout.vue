@@ -87,14 +87,29 @@
         </el-menu>
       </div>
       <div class="content">
-        <router-view></router-view>
+        <el-tabs 
+          v-model="activeTab" 
+          type="card" 
+          closable 
+          @tab-remove="removeTab"
+          @tab-click="handleTabClick"
+        >
+          <el-tab-pane
+            v-for="tab in tabs"
+            :key="tab.path"
+            :label="tab.title"
+            :name="tab.path"
+          >
+            <component :is="tab.component" v-if="activeTab === tab.path"></component>
+          </el-tab-pane>
+        </el-tabs>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import axios from '@/config/axios'
@@ -105,6 +120,8 @@ export default {
     const store = useStore()
     const menuList = ref([])
     const userInfo = computed(() => store.state.userInfo)
+    const activeTab = ref('')
+    const tabs = ref([])
 
     onMounted(async () => {
       const userData = localStorage.getItem('userInfo')
@@ -162,15 +179,55 @@ export default {
 
     const handleMenuClick = (menu) => {
       if(menu.SRC_PATH) {
-        router.push(menu.SRC_PATH)
+        const existingTab = tabs.value.find(tab => tab.path === menu.SRC_PATH)
+        if (!existingTab) {
+          // 동적으로 컴포넌트 import
+          const component = defineAsyncComponent(() => 
+            import(`@/views${menu.SRC_PATH}.vue`)
+          )
+          tabs.value.push({
+            title: menu.MENU_NAME,
+            path: menu.SRC_PATH,
+            component
+          })
+        }
+        activeTab.value = menu.SRC_PATH
       }
+    }
+
+    const removeTab = (targetPath) => {
+      const tabs = tabs.value
+      let activePath = activeTab.value
+      if (activePath === targetPath) {
+        tabs.forEach((tab, index) => {
+          if (tab.path === targetPath) {
+            const nextTab = tabs[index + 1] || tabs[index - 1]
+            if (nextTab) {
+              activePath = nextTab.path
+            }
+          }
+        })
+      }
+      
+      tabs.value = tabs.filter(tab => tab.path !== targetPath)
+      if (activePath) {
+        router.push(activePath)
+      }
+    }
+
+    const handleTabClick = (tab) => {
+      activeTab.value = tab.props.name
     }
 
     return {
       formattedMenuList,
       userInfo,
       handleLogout,
-      handleMenuClick
+      handleMenuClick,
+      activeTab,
+      tabs,
+      removeTab,
+      handleTabClick
     }
   }
 }
@@ -314,5 +371,34 @@ export default {
   background-color: #40a9ff !important;
 }
 
-</style>
+:deep(.el-tabs__header) {
+  margin-bottom: 15px;
+  background: white;
+  padding: 5px 5px 0;
+}
 
+:deep(.el-tabs__item) {
+  height: 30px;
+  line-height: 30px;
+  padding: 0 20px;
+  background-color: #e6f7ff;
+  border: 1px solid #91d5ff;
+  margin-right: 5px;
+  border-radius: 4px 4px 0 0;
+}
+
+:deep(.el-tabs__item.is-active) {
+  background-color: #1890ff;
+  color: white;
+  border-color: #1890ff;
+}
+
+:deep(.el-tabs__item:hover) {
+  color: #1890ff;
+  background-color: #f0f9ff;
+}
+
+:deep(.el-tabs__item.is-active:hover) {
+  color: white;
+}
+</style>
