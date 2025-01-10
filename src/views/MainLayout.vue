@@ -88,19 +88,18 @@
       </div>
       <div class="content">
         <el-tabs 
-          v-model="activeTab" 
+          v-model="editableTabsValue" 
           type="card" 
           closable 
           @tab-remove="removeTab"
-          @tab-click="handleTabClick"
         >
           <el-tab-pane
-            v-for="tab in tabs"
-            :key="tab.path"
-            :label="tab.title"
-            :name="tab.path"
+            v-for="item in editableTabs"
+            :key="item.name"
+            :label="item.title"
+            :name="item.name"
           >
-            <component :is="tab.component" v-if="activeTab === tab.path"></component>
+            <component :is="item.content"></component>
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -108,127 +107,111 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import { useStore } from 'vuex'
 import { useRouter } from 'vue-router'
 import axios from '@/config/axios'
 
-export default {
-  setup() {
-    const router = useRouter()
-    const store = useStore()
-    const menuList = ref([])
-    const userInfo = computed(() => store.state.userInfo)
-    const activeTab = ref('')
-    const tabs = ref([])
+const router = useRouter()
+const store = useStore()
+const menuList = ref([])
+const userInfo = computed(() => store.state.userInfo)
 
-    onMounted(async () => {
-      const userData = localStorage.getItem('userInfo')
-      if (userData) {
-        store.commit('setUserInfo', JSON.parse(userData))
-      }
+// 탭 관련 상태 선언을 script setup 내부에서 통일
+const editableTabs = ref([])
+const editableTabsValue = ref('')
 
-      try {
-        const authHeader = store.state.authHeader
-        const response = await axios.post('/webCommon/getMenu', {}, {
-          headers: {
-            'Authorization': authHeader
-          }
-        })
-        menuList.value = response.data
-      } catch (error) {
-        console.error('Failed to load menu:', error)
+onMounted(async () => {
+  const userData = localStorage.getItem('userInfo')
+  if (userData) {
+    store.commit('setUserInfo', JSON.parse(userData))
+  }
+
+  try {
+    const authHeader = store.state.authHeader
+    const response = await axios.post('/webCommon/getMenu', {}, {
+      headers: {
+        'Authorization': authHeader
       }
     })
+    menuList.value = response.data
+  } catch (error) {
+    console.error('Failed to load menu:', error)
+  }
+})
 
-    const formattedMenuList = computed(() => {
-      const menus = menuList.value || []
-      const formattedMenus = menus.filter(menu => !menu.PARENTS_MENU_ID)
-      
-      formattedMenus.forEach(menu => {
-        if (menu.MENU_TYPE === 'F') {
-          const level2Items = menus.filter(item => item.PARENTS_MENU_ID === menu.MENU_ID)
-          
-          level2Items.forEach(l2Item => {
-            if (l2Item.MENU_TYPE === 'F') {
-              const level3Items = menus.filter(item => item.PARENTS_MENU_ID === l2Item.MENU_ID)
-              
-              level3Items.forEach(l3Item => {
-                if (l3Item.MENU_TYPE === 'F') {
-                  l3Item.children = menus.filter(item => item.PARENTS_MENU_ID === l3Item.MENU_ID)
-                }
-              })
-              
-              l2Item.children = level3Items
+const formattedMenuList = computed(() => {
+  const menus = menuList.value || []
+  const formattedMenus = menus.filter(menu => !menu.PARENTS_MENU_ID)
+
+  formattedMenus.forEach(menu => {
+    if (menu.MENU_TYPE === 'F') {
+      const level2Items = menus.filter(item => item.PARENTS_MENU_ID === menu.MENU_ID)
+    
+      level2Items.forEach(l2Item => {
+        if (l2Item.MENU_TYPE === 'F') {
+          const level3Items = menus.filter(item => item.PARENTS_MENU_ID === l2Item.MENU_ID)
+        
+          level3Items.forEach(l3Item => {
+            if (l3Item.MENU_TYPE === 'F') {
+              l3Item.children = menus.filter(item => item.PARENTS_MENU_ID === l3Item.MENU_ID)
             }
           })
-          
-          menu.children = level2Items
+        
+          l2Item.children = level3Items
         }
       })
-      
-      return formattedMenus
-    })
-
-    const handleLogout = () => {
-      store.commit('setUserInfo', null)
-      localStorage.removeItem('userInfo')
-      router.push('/')
+    
+      menu.children = level2Items
     }
+  })
 
-    const handleMenuClick = (menu) => {
-      if(menu.SRC_PATH) {
-        const existingTab = tabs.value.find(tab => tab.path === menu.SRC_PATH)
-        if (!existingTab) {
-          // 동적으로 컴포넌트 import
-          const component = defineAsyncComponent(() => 
-            import(`@/views${menu.SRC_PATH}.vue`)
-          )
-          tabs.value.push({
-            title: menu.MENU_NAME,
-            path: menu.SRC_PATH,
-            component
-          })
-        }
-        activeTab.value = menu.SRC_PATH
-      }
-    }
+  return formattedMenus
+})
 
-    const removeTab = (targetPath) => {
-      const tabs = tabs.value
-      let activePath = activeTab.value
-      if (activePath === targetPath) {
-        tabs.forEach((tab, index) => {
-          if (tab.path === targetPath) {
-            const nextTab = tabs[index + 1] || tabs[index - 1]
-            if (nextTab) {
-              activePath = nextTab.path
-            }
-          }
-        })
-      }
-      
-      tabs.value = tabs.filter(tab => tab.path !== targetPath)
-      if (activePath) {
-        router.push(activePath)
-      }
-    }
+const handleLogout = () => {
+  store.commit('setUserInfo', null)
+  localStorage.removeItem('userInfo')
+  router.push('/')
+}
 
-    const handleTabClick = (tab) => {
-      activeTab.value = tab.props.name
+const handleMenuClick = (menu) => {
+  if(menu.SRC_PATH) {
+    const existingTab = editableTabs.value.find(tab => tab.name === menu.SRC_PATH)
+    if (!existingTab) {
+      // 동적으로 컴포넌트 import
+      const component = defineAsyncComponent(() => 
+        import(`@/views${menu.SRC_PATH}.vue`)
+      )
+      editableTabs.value.push({
+        title: menu.MENU_NAME,
+        name: menu.SRC_PATH,
+        content: component
+      })
     }
+    editableTabsValue.value = menu.SRC_PATH
+  }
+}
 
-    return {
-      formattedMenuList,
-      userInfo,
-      handleLogout,
-      handleMenuClick,
-      activeTab,
-      tabs,
-      removeTab,
-      handleTabClick
+const removeTab = (targetName) => {
+  const tabs = editableTabs.value
+  let activeName = editableTabsValue.value
+  
+  // 현재 닫는 탭의 인덱스 찾기
+  let currentIndex = tabs.findIndex(tab => tab.name === targetName)
+  
+  // 탭 제거
+  tabs.splice(currentIndex, 1)
+  
+  // 닫은 탭이 현재 활성화된 탭이었다면
+  if (activeName === targetName) {
+    if (currentIndex === tabs.length) {
+      activeName = tabs[currentIndex - 1]?.name
+    } else {
+      activeName = tabs[currentIndex]?.name
     }
+    editableTabsValue.value = activeName
   }
 }
 </script>
@@ -287,7 +270,7 @@ export default {
   flex: 1;
   padding: 20px;
   overflow-y: auto;
-  background-color: #f5f7fa;
+  background-color: #f5f7fa;  /* 메인 배경색 */
 }
 
 /* M 타입 메뉴 스타일 */
@@ -373,10 +356,15 @@ export default {
 
 :deep(.el-tabs__header) {
   margin-bottom: 15px;
-  background: white;
+  background: #f5f7fa;  /* 탭 헤더 배경색을 메인 배경색과 동일하게 변경 */
   padding: 5px 5px 0;
 }
 
+:deep(.el-tabs__content) {
+  background-color: #f5f7fa;  /* 탭 컨텐츠 영역도 동일한 배경색 적용 */
+}
+
+/* 탭 아이템 스타일 개선 */
 :deep(.el-tabs__item) {
   height: 30px;
   line-height: 30px;

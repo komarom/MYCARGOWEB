@@ -1,0 +1,12 @@
+.close-tab-btn {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0 5px;
+  margin-left: 5px;
+}
+
+.close-tab-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+}
